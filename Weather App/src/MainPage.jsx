@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./MainPage.css";
 
 export default function MainPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -29,6 +30,8 @@ export default function MainPage() {
         <button className="close-btn" onClick={toggleSidebar}>
           &times;
         </button>
+        <Link to="/" onClick={toggleSidebar}>Home</Link>
+        <Link to="/dashboard" onClick={toggleSidebar}>Dashboard</Link>
         <Link to="/profile" onClick={toggleSidebar}>Profile</Link>
         <Link to="/favourites" onClick={toggleSidebar}>Favourites</Link>
         <Link to="/history" onClick={toggleSidebar}>History</Link>
@@ -37,9 +40,13 @@ export default function MainPage() {
 
       {isSidebarOpen && <div className="overlay" onClick={toggleSidebar}></div>}
 
-      <main className="main-content">
+      {/* Centered Welcome Section */}
+      <main className="main-content center-content">
         <h2>Welcome to Weather App</h2>
         <p>Check the latest weather and manage your favourites & history.</p>
+        <button className="go-btn" onClick={() => navigate("/dashboard")}>
+          Go to Dashboard
+        </button>
       </main>
     </div>
   );
