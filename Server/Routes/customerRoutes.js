@@ -53,4 +53,30 @@ router.post("/login", async (req, res) => {
   }
 });
 
+router.post("/AddFavourite/:customerId", async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    const { place, latitude, longitude } = req.body;
+
+    if (!place || !latitude || !longitude) {
+      return res.status(400).json({ message: "Place, latitude, and longitude are required" });
+    }
+
+    // Find customer
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    // Add new favourite
+    customer.favourites.push({ place, latitude, longitude });
+    await customer.save();
+
+    res.json({ message: "Favourite added successfully", favourites: customer.favourites });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;

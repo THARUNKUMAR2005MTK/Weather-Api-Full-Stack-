@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
-import { FaTemperatureHigh, FaTint, FaCloud, FaStar } from "react-icons/fa"; // ✅ Icons
+import { FaTemperatureHigh, FaTint, FaCloud, FaStar } from "react-icons/fa";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "./Dashboard.css";
@@ -37,16 +37,14 @@ export default function Dashboard() {
 
   // ✅ Check login
   useEffect(() => {
-    const customer = localStorage.getItem("customer");
-    if (!customer) {
+    const customerId = localStorage.getItem("customer"); // use correct key
+    if (!customerId) {
       alert("⚠️ You must log in to access the dashboard.");
-      setTimeout(() => {
-        navigate("/");
-      }, 2000);
+      navigate("/"); // direct redirect
     }
   }, [navigate]);
 
-  // Fetch weather
+  // ✅ Fetch weather
   const fetchWeather = async (lat, lon) => {
     try {
       const res = await fetch(
@@ -68,7 +66,7 @@ export default function Dashboard() {
     }
   };
 
-  // Detect location
+  // ✅ Detect current location on load
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -76,15 +74,16 @@ export default function Dashboard() {
         setLocation(coords);
         fetchWeather(coords.lat, coords.lon);
       },
-      (err) => console.error(err)
+      (err) => console.error("Geolocation error:", err)
     );
   }, []);
 
+  // Refetch weather whenever location changes
   useEffect(() => {
     if (location) fetchWeather(location.lat, location.lon);
   }, [location]);
 
-  // Search suggestions (Geo API)
+  // ✅ Search suggestions (Geo API)
   const fetchSuggestions = async (query) => {
     if (!query) {
       setSuggestions([]);
@@ -101,7 +100,7 @@ export default function Dashboard() {
     }
   };
 
-  // Handle search select
+  // ✅ Handle selecting a suggestion
   const handleSelectSuggestion = (city) => {
     setSearchQuery(city.name);
     setSuggestions([]);
@@ -109,26 +108,39 @@ export default function Dashboard() {
     fetchWeather(city.lat, city.lon);
   };
 
-  // Add favourite
+  // ✅ Add favourite
   const handleAddFavourite = async () => {
-    const customerId = localStorage.getItem("customer");
-    if (!customerId || !location) {
-      alert("⚠️ No customer or location found.");
+    const customerId = localStorage.getItem("customer"); // use correct key
+    if (!customerId || !location || !weather) {
+      alert("⚠️ Missing customer, location, or weather data.");
       return;
     }
+
+    const favouriteData = {
+      place: weather.name,
+      latitude: location.lat,
+      longitude: location.lon,
+    };
+
     try {
-      const res = await fetch(`/api/customer/AddFavourite/${customerId}`, {
+     const res = await fetch(
+      `http://localhost:5000/api/customers/AddFavourite/${customerId}`,
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(location),
-      });
+        body: JSON.stringify(favouriteData),
+      }
+    );
+
       if (res.ok) {
         alert("✅ Location added to favourites!");
       } else {
-        alert("❌ Failed to add favourite.");
+        const err = await res.json();
+        alert(`❌ Failed: ${err.message || "Error"}`);
       }
     } catch (err) {
       console.error("Add Favourite Error:", err);
+      alert("❌ Could not add favourite.");
     }
   };
 
@@ -139,7 +151,7 @@ export default function Dashboard() {
       <div className="dashboard-content">
         <h1>Weather Dashboard</h1>
 
-        {/* Weather card */}
+        {/* ✅ Weather card */}
         {weather ? (
           <div className="weather-card">
             <h2>{weather.name}</h2>
@@ -160,7 +172,7 @@ export default function Dashboard() {
           <p>Loading weather...</p>
         )}
 
-        {/* Search box with suggestions */}
+        {/* ✅ Search box */}
         <div className="search-box">
           <input
             type="text"
@@ -182,11 +194,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Map toggle */}
-        <button
-          className="map-toggle-btn"
-          onClick={() => setShowMap(!showMap)}
-        >
+        {/* ✅ Map toggle */}
+        <button className="map-toggle-btn" onClick={() => setShowMap(!showMap)}>
           {showMap ? "Hide Map" : "Pick Location on Map"}
         </button>
 
