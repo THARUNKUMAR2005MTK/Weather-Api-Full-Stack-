@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { useNavigate } from "react-router-dom";
+import Navbar from "./Navbar";
+import { FaTemperatureHigh, FaTint, FaCloud, FaStar } from "react-icons/fa"; // ✅ Icons
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import "./Dashboard.css"; // optional, you can style later
+import "./Dashboard.css";
 
-// ✅ Fix Leaflet marker icon issue
+// ✅ Fix Leaflet marker issue
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 let DefaultIcon = L.icon({
@@ -13,7 +16,7 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const API_KEY = "8987f0ac66e36030e709146c8ace1f98"; // ⬅ replace with your real key
+const API_KEY = "8987f0ac66e36030e709146c8ace1f98";
 
 function LocationMarker({ setLocation }) {
   useMapEvents({
@@ -29,8 +32,21 @@ export default function Dashboard() {
   const [location, setLocation] = useState(null);
   const [showMap, setShowMap] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const navigate = useNavigate();
 
-  // Fetch weather by coordinates
+  // ✅ Check login
+  useEffect(() => {
+    const customer = localStorage.getItem("customer");
+    if (!customer) {
+      alert("⚠️ You must log in to access the dashboard.");
+      setTimeout(() => {
+        navigate("/");
+      }, 2000);
+    }
+  }, [navigate]);
+
+  // Fetch weather
   const fetchWeather = async (lat, lon) => {
     try {
       const res = await fetch(
@@ -46,21 +62,17 @@ export default function Dashboard() {
         });
       } else {
         setWeather(null);
-        alert("Weather not found for this location.");
       }
     } catch (err) {
-      console.error("Error fetching weather:", err);
+      console.error("Weather fetch error:", err);
     }
   };
 
-  // Detect current location
+  // Detect location
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const coords = {
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-        };
+        const coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         setLocation(coords);
         fetchWeather(coords.lat, coords.lon);
       },
@@ -68,90 +80,130 @@ export default function Dashboard() {
     );
   }, []);
 
-  // Update weather when location changes
   useEffect(() => {
-    if (location) {
-      fetchWeather(location.lat, location.lon);
-    }
+    if (location) fetchWeather(location.lat, location.lon);
   }, [location]);
 
-  // Search by city name
-  const handleSearch = async () => {
-    if (!searchQuery) return;
+  // Search suggestions (Geo API)
+  const fetchSuggestions = async (query) => {
+    if (!query) {
+      setSuggestions([]);
+      return;
+    }
     try {
       const res = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${searchQuery}&appid=${API_KEY}&units=metric`
+        `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${API_KEY}`
       );
       const data = await res.json();
-      if (data.cod === 200) {
-        setWeather({
-          name: data.name,
-          temp: data.main.temp,
-          humidity: data.main.humidity,
-          condition: data.weather[0].description,
-        });
-        setLocation({ lat: data.coord.lat, lon: data.coord.lon });
+      setSuggestions(data);
+    } catch (err) {
+      console.error("Suggestion fetch error:", err);
+    }
+  };
+
+  // Handle search select
+  const handleSelectSuggestion = (city) => {
+    setSearchQuery(city.name);
+    setSuggestions([]);
+    setLocation({ lat: city.lat, lon: city.lon });
+    fetchWeather(city.lat, city.lon);
+  };
+
+  // Add favourite
+  const handleAddFavourite = async () => {
+    const customerId = localStorage.getItem("customer");
+    if (!customerId || !location) {
+      alert("⚠️ No customer or location found.");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/customer/AddFavourite/${customerId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(location),
+      });
+      if (res.ok) {
+        alert("✅ Location added to favourites!");
       } else {
-        alert("City not found.");
+        alert("❌ Failed to add favourite.");
       }
     } catch (err) {
-      console.error("Search error:", err);
+      console.error("Add Favourite Error:", err);
     }
   };
 
   return (
-    <div className="dashboard" style={{ textAlign: "center", padding: "20px" }}>
-      <h1>Weather Dashboard</h1>
+    <div className="dashboard">
+      <Navbar />
 
-      {weather ? (
-        <div className="weather-card" style={{ marginBottom: "20px" }}>
-          <h2>{weather.name}</h2>
-          <p>🌡 Temperature: {weather.temp}°C</p>
-          <p>💧 Humidity: {weather.humidity}%</p>
-          <p>☁ Condition: {weather.condition}</p>
+      <div className="dashboard-content">
+        <h1>Weather Dashboard</h1>
+
+        {/* Weather card */}
+        {weather ? (
+          <div className="weather-card">
+            <h2>{weather.name}</h2>
+            <p>
+              <FaTemperatureHigh /> Temperature: {weather.temp}°C
+            </p>
+            <p>
+              <FaTint /> Humidity: {weather.humidity}%
+            </p>
+            <p>
+              <FaCloud /> Condition: {weather.condition}
+            </p>
+            <button className="favourite-btn" onClick={handleAddFavourite}>
+              <FaStar /> Add to Favourites
+            </button>
+          </div>
+        ) : (
+          <p>Loading weather...</p>
+        )}
+
+        {/* Search box with suggestions */}
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="Search city"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              fetchSuggestions(e.target.value);
+            }}
+          />
+          {suggestions.length > 0 && (
+            <ul className="suggestions-list">
+              {suggestions.map((city, idx) => (
+                <li key={idx} onClick={() => handleSelectSuggestion(city)}>
+                  {city.name}, {city.state || ""} {city.country}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-      ) : (
-        <p>Loading weather...</p>
-      )}
 
-      {/* Search Box */}
-      <div style={{ marginBottom: "15px" }}>
-        <input
-          type="text"
-          placeholder="Enter city name"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ padding: "8px", width: "200px", marginRight: "8px" }}
-        />
-        <button onClick={handleSearch} style={{ padding: "8px 12px" }}>
-          Search
+        {/* Map toggle */}
+        <button
+          className="map-toggle-btn"
+          onClick={() => setShowMap(!showMap)}
+        >
+          {showMap ? "Hide Map" : "Pick Location on Map"}
         </button>
+
+        {showMap && (
+          <div className="map-container">
+            <MapContainer
+              center={[location?.lat || 20, location?.lon || 78]}
+              zoom={5}
+              style={{ height: "100%", width: "100%" }}
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              {location && <Marker position={[location.lat, location.lon]} />}
+              <LocationMarker setLocation={setLocation} />
+            </MapContainer>
+          </div>
+        )}
       </div>
-
-      {/* Map Picker Toggle */}
-      <button
-        onClick={() => setShowMap(!showMap)}
-        style={{ padding: "8px 12px", marginBottom: "15px" }}
-      >
-        {showMap ? "Hide Map" : "Pick Location on Map"}
-      </button>
-
-      {/* Map */}
-      {showMap && (
-        <div style={{ height: "400px", width: "100%", marginTop: "10px" }}>
-          <MapContainer
-            center={[location?.lat || 20, location?.lon || 78]}
-            zoom={5}
-            style={{ height: "100%", width: "100%" }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {location && <Marker position={[location.lat, location.lon]} />}
-            <LocationMarker setLocation={setLocation} />
-          </MapContainer>
-        </div>
-      )}
     </div>
   );
 }
