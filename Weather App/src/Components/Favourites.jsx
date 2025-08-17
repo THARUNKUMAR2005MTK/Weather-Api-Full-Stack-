@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import { FaTemperatureHigh, FaTint, FaCloud } from "react-icons/fa";
+import { AnimatePresence, motion } from "framer-motion";
 import "./Favourites.css";
-import { AnimatePresence } from "framer-motion";
 
 const API_KEY = "8987f0ac66e36030e709146c8ace1f98";
 
@@ -36,17 +36,18 @@ export default function Favourites() {
 
         const weatherPromises = favs.map(async (fav) => {
           try {
-            // Today (current weather)
+            // Current weather
             const currentRes = await fetch(
               `https://api.openweathermap.org/data/2.5/weather?lat=${fav.latitude}&lon=${fav.longitude}&appid=${API_KEY}&units=metric`
             );
             const currentData = await currentRes.json();
 
-            // Tomorrow forecast
+            // Tomorrow forecast via One Call 3.0
             const oneCallRes = await fetch(
-              `https://api.openweathermap.org/data/2.5/onecall?lat=${fav.latitude}&lon=${fav.longitude}&exclude=minutely,hourly,alerts&appid=${API_KEY}&units=metric`
+              `https://api.openweathermap.org/data/3.0/onecall?lat=${fav.latitude}&lon=${fav.longitude}&exclude=minutely,hourly,alerts&appid=${API_KEY}&units=metric`
             );
             const oneCallData = await oneCallRes.json();
+
             const tomorrow = oneCallData?.daily?.[1] || null;
 
             return {
@@ -65,7 +66,8 @@ export default function Favourites() {
                   }
                 : null,
             };
-          } catch {
+          } catch (err) {
+            console.error(`Weather fetch error for ${fav.place}:`, err);
             return { place: fav.place, today: null, tomorrow: null };
           }
         });
@@ -114,8 +116,7 @@ export default function Favourites() {
                     {fav.today ? (
                       <p>
                         <FaTemperatureHigh /> {fav.today.temp}°C,{" "}
-                        <FaTint /> {fav.today.humidity}%,
-                        <FaCloud /> {fav.today.condition}
+                        <FaTint /> {fav.today.humidity}%, <FaCloud /> {fav.today.condition}
                       </p>
                     ) : (
                       <p>Data not available</p>
