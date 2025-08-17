@@ -1,0 +1,54 @@
+.favourites-page {
+  margin-top: 2.5%;
+  padding: 20px;
+  min-height: 100vh;
+  background: #e0f7fa;
+  font-family: sans-serif;
+}
+
+
+@media (max-width: 768px) {
+  .favourites-page {
+    margin-top: 10%;
+  }
+}
+
+.favourites-content h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.favourites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.fav-card {
+  background: #ffffffcc;
+  padding: 15px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.fav-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+
+.fav-card h3 {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.weather-day {
+  margin: 8px 0;
+  padding: 8px;
+  background: #f0f0f0aa;
+  border-radius: 8px;
+}
+
+.weather-day h4 {
+  margin-bottom: 4px;
+}

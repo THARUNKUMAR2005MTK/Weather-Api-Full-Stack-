@@ -1,13 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-
+import "./Navbar.css";
 
 export default function Navbar() {
   const [customer, setCustomer] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Check localStorage on load
   useEffect(() => {
     const storedCustomer = localStorage.getItem("customer");
     if (storedCustomer) {
@@ -16,9 +15,9 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("customer"); // clear session
+    localStorage.removeItem("customer");
     setCustomer(null);
-    navigate("/"); // redirect to home after logout
+    navigate("/");
   };
 
   const toggleSidebar = () => {
@@ -27,26 +26,32 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Navbar */}
       <nav className="navbar">
-        <h1 className="navbar-title">Weather App</h1>
-        <div className="navbar-links">
-          <button className="menu-btn" onClick={toggleSidebar}>
-            Menu
-          </button>
-          <a href="#about" className="nav-link">
-            About
-          </a>
-
-          {customer ? (
-            <button onClick={handleLogout} className="nav-link">
-              Logout
+        <div className="navbar-container">
+          <h1 className="navbar-title">Weather App</h1>
+          <div className="navbar-links">
+            {/* Menu button - visible on all screens */}
+            <button className="menu-btn" onClick={toggleSidebar}>
+              <span className="menu-icon">☰</span>
+              <span className="menu-text">Menu</span>
             </button>
-          ) : (
-            <Link to="/login" className="nav-link">
-              Login
-            </Link>
-          )}
+
+            {/* About link - visible on all screens */}
+            <a href="#about" className="nav-link">
+              About
+            </a>
+
+            {/* Login/Logout - visible on all screens */}
+            {customer ? (
+              <button onClick={handleLogout} className="nav-link">
+                Logout
+              </button>
+            ) : (
+              <Link to="/login" className="nav-link">
+                Login
+              </Link>
+            )}
+          </div>
         </div>
       </nav>
 
@@ -55,15 +60,32 @@ export default function Navbar() {
         <button className="close-btn" onClick={toggleSidebar}>
           &times;
         </button>
-        <Link to="/" onClick={toggleSidebar}>Home</Link>
-        <Link to="/dashboard" onClick={toggleSidebar}>Dashboard</Link>
-        <Link to="/profile" onClick={toggleSidebar}>Profile</Link>
-        <Link to="/favourites" onClick={toggleSidebar}>Favourites</Link>
-        <Link to="/history" onClick={toggleSidebar}>History</Link>
-        <Link to="/support" onClick={toggleSidebar}>Support</Link>
+        <div className="sidebar-links">
+          <Link to="/" onClick={toggleSidebar} className="sidebar-link">
+            Home
+          </Link>
+          <Link to="/dashboard" onClick={toggleSidebar} className="sidebar-link">
+            Dashboard
+          </Link>
+          <Link to="/profile" onClick={toggleSidebar} className="sidebar-link">
+            Profile
+          </Link>
+          <Link to="/favourites" onClick={toggleSidebar} className="sidebar-link">
+            Favourites
+          </Link>
+          <Link to="/history" onClick={toggleSidebar} className="sidebar-link">
+            History
+          </Link>
+          <Link to="/support" onClick={toggleSidebar} className="sidebar-link">
+            Support
+          </Link>
+        </div>
       </div>
 
-      {isSidebarOpen && <div className="overlay" onClick={toggleSidebar}></div>}
+      {/* Overlay */}
+      {isSidebarOpen && (
+        <div className="sidebar-overlay" onClick={toggleSidebar}></div>
+      )}
     </>
   );
 }

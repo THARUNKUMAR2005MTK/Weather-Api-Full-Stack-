@@ -7,9 +7,10 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "./Dashboard.css";
 
-// ✅ Fix Leaflet marker issue
+// Fix Leaflet marker issue
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
 let DefaultIcon = L.icon({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
@@ -33,62 +34,101 @@ export default function Dashboard() {
   const [showMap, setShowMap] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  const [historySaved, setHistorySaved] = useState(false);
+
   const navigate = useNavigate();
 
-  // ✅ Check login
+  // Check login
   useEffect(() => {
-    const customerId = localStorage.getItem("customer"); // use correct key
+    const customerId = localStorage.getItem("customer");
     if (!customerId) {
       alert("⚠️ You must log in to access the dashboard.");
-      navigate("/"); // direct redirect
+      navigate("/");
     }
   }, [navigate]);
 
-  // ✅ Fetch weather
-  const fetchWeather = async (lat, lon) => {
+  // Save weather to history (backend)
+  const saveHistory = async (weatherData, locationData) => {
+    const customerId = localStorage.getItem("customer");
+    if (!customerId || !weatherData || !locationData) return;
+
+    const historyEntry = {
+      place: weatherData.name,
+      latitude: locationData.lat,
+      longitude: locationData.lon,
+      temp: weatherData.temp,
+      humidity: weatherData.humidity,
+      condition: weatherData.condition,
+    };
+
     try {
       const res = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
+        `http://localhost:5000/api/customers/addHistory/${customerId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(historyEntry),
+        }
       );
-      const data = await res.json();
-      if (data.cod === 200) {
-        setWeather({
-          name: data.name,
-          temp: data.main.temp,
-          humidity: data.main.humidity,
-          condition: data.weather[0].description,
-        });
-      } else {
-        setWeather(null);
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Add history failed:", err.message || "Error");
       }
     } catch (err) {
-      console.error("Weather fetch error:", err);
+      console.error("Add history error:", err);
     }
   };
 
-  // ✅ Detect current location on load
+  // Fetch weather for a given location
+  const fetchWeather = async (lat, lon) => {
+  try {
+    const res = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
+    );
+    const data = await res.json();
+    if (data.cod === 200) {
+      const weatherData = {
+        name: data.name,
+        temp: data.main.temp,
+        humidity: data.main.humidity,
+        condition: data.weather[0].description,
+      };
+      setWeather(weatherData);
+
+      // ✅ Always save history after fetching weather
+      saveHistory(weatherData, { lat, lon });
+    } else {
+      setWeather(null);
+    }
+  } catch (err) {
+    console.error("Weather fetch error:", err);
+  }
+};
+
+  // Detect current location on load
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         setLocation(coords);
+        setHistorySaved(false); // reset for new location
         fetchWeather(coords.lat, coords.lon);
       },
       (err) => console.error("Geolocation error:", err)
     );
   }, []);
 
-  // Refetch weather whenever location changes
+  // Refetch weather when location changes
   useEffect(() => {
-    if (location) fetchWeather(location.lat, location.lon);
+    if (location) {
+      setHistorySaved(false); // reset for new location
+      fetchWeather(location.lat, location.lon);
+    }
   }, [location]);
 
-  // ✅ Search suggestions (Geo API)
+  // Fetch city suggestions
   const fetchSuggestions = async (query) => {
-    if (!query) {
-      setSuggestions([]);
-      return;
-    }
+    if (!query) return setSuggestions([]);
     try {
       const res = await fetch(
         `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${API_KEY}`
@@ -100,17 +140,16 @@ export default function Dashboard() {
     }
   };
 
-  // ✅ Handle selecting a suggestion
+  // Select a suggested city
   const handleSelectSuggestion = (city) => {
     setSearchQuery(city.name);
     setSuggestions([]);
     setLocation({ lat: city.lat, lon: city.lon });
-    fetchWeather(city.lat, city.lon);
   };
 
-  // ✅ Add favourite
+  // Add to favourites
   const handleAddFavourite = async () => {
-    const customerId = localStorage.getItem("customer"); // use correct key
+    const customerId = localStorage.getItem("customer");
     if (!customerId || !location || !weather) {
       alert("⚠️ Missing customer, location, or weather data.");
       return;
@@ -123,18 +162,16 @@ export default function Dashboard() {
     };
 
     try {
-     const res = await fetch(
-      `http://localhost:5000/api/customers/AddFavourite/${customerId}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(favouriteData),
-      }
-    );
-
-      if (res.ok) {
-        alert("✅ Location added to favourites!");
-      } else {
+      const res = await fetch(
+        `http://localhost:5000/api/customers/AddFavourite/${customerId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(favouriteData),
+        }
+      );
+      if (res.ok) alert("✅ Location added to favourites!");
+      else {
         const err = await res.json();
         alert(`❌ Failed: ${err.message || "Error"}`);
       }
@@ -147,11 +184,9 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <Navbar />
-
       <div className="dashboard-content">
         <h1>Weather Dashboard</h1>
 
-        {/* ✅ Weather card */}
         {weather ? (
           <div className="weather-card">
             <h2>{weather.name}</h2>
@@ -172,7 +207,6 @@ export default function Dashboard() {
           <p>Loading weather...</p>
         )}
 
-        {/* ✅ Search box */}
         <div className="search-box">
           <input
             type="text"
@@ -194,7 +228,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* ✅ Map toggle */}
         <button className="map-toggle-btn" onClick={() => setShowMap(!showMap)}>
           {showMap ? "Hide Map" : "Pick Location on Map"}
         </button>

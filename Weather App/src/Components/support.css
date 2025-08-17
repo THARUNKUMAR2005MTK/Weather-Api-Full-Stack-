@@ -1,0 +1,47 @@
+.support-page {
+  padding: 20px;
+  font-family: sans-serif;
+  margin-top:10%;
+}
+
+.support-content {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.support-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.support-form input,
+.support-form textarea {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.support-form textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.support-form button {
+  padding: 10px;
+  background-color: #0288d1;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.support-form button:hover {
+  background-color: #0277bd;
+}
+
+.status-msg {
+  margin-top: 10px;
+  font-weight: bold;
+}
